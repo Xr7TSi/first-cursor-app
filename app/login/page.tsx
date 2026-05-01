@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PasswordField from "@/app/components/password-field";
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string }>;
@@ -35,18 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             />
           </div>
 
-          <div className="space-y-1">
-            <label htmlFor="password" className="block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-            />
-          </div>
+          <PasswordField id="password" autoComplete="current-password" />
 
           <button
             type="submit"
