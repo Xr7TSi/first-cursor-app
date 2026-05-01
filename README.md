@@ -20,6 +20,20 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## MongoDB Setup
+
+1. Create a `.env.local` file in the project root.
+2. Add your Atlas connection string:
+
+```bash
+MONGODB_URI="mongodb+srv://<username>:<password>@<cluster>/<dbName>?retryWrites=true&w=majority&appName=<appName>"
+```
+
+3. Start the app with `npm run dev`.
+4. Verify the database connection at [http://localhost:3000/api/health/db](http://localhost:3000/api/health/db).
+
+If connected, the route returns `ok: true`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
