@@ -23,23 +23,28 @@ type SessionDoc = {
   createdAt: Date;
 };
 
+// Returns the default MongoDB database from the shared client.
 async function getDb() {
   const client = await clientPromise;
   return client.db();
 }
 
+// Normalizes email input for consistent storage and lookups.
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+// Exposes the cookie key used to store the session token.
 export function getSessionCookieName() {
   return SESSION_COOKIE_NAME;
 }
 
+// Converts the session lifetime to seconds for cookie maxAge.
 export function getSessionDurationSeconds() {
   return Math.floor(SESSION_DURATION_MS / 1000);
 }
 
+// Validates signup input, hashes password, and creates a new user.
 export async function createUser(params: {
   username: string;
   email: string;
@@ -79,6 +84,7 @@ export async function createUser(params: {
   };
 }
 
+// Verifies login credentials and returns basic user info on success.
 export async function authenticateUser(emailInput: string, password: string) {
   const email = normalizeEmail(emailInput);
   const db = await getDb();
@@ -100,6 +106,7 @@ export async function authenticateUser(emailInput: string, password: string) {
   };
 }
 
+// Creates a new session record and returns its token and expiry.
 export async function createSession(userId: ObjectId) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
@@ -119,6 +126,7 @@ export async function createSession(userId: ObjectId) {
   };
 }
 
+// Deletes a session by token (used during logout/cleanup).
 export async function deleteSession(token: string) {
   if (!token) return;
   const db = await getDb();
@@ -126,6 +134,7 @@ export async function deleteSession(token: string) {
   await sessions.deleteOne({ token });
 }
 
+// Resolves the current user from the session cookie, if valid.
 export async function getLoggedInUser() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
