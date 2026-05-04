@@ -1,47 +1,88 @@
 import Link from "next/link";
 import { getLoggedInUser } from "@/lib/auth";
+import { getUpcomingActivityCards } from "@/lib/activities";
 
 export default async function Home() {
+  // Reads the signed-in user (if any) to render auth actions in the header.
   const user = await getLoggedInUser();
+  // Loads upcoming activities from MongoDB for the timeline cards.
+  const upcomingEvents = await getUpcomingActivityCards();
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <main className="w-full max-w-lg rounded-2xl border border-black/10 bg-white p-10 shadow-sm dark:border-white/10 dark:bg-zinc-900">
-        <h1 className="text-3xl font-semibold">Welcome</h1>
-        <p className="mt-3 text-zinc-600 dark:text-zinc-300">
-          Start by creating an account or logging in.
-        </p>
-
-        {user ? (
-          <div className="mt-8 space-y-4">
-            <p className="text-lg">
-              Hi {user.username}
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <header className="sticky top-0 z-10 border-b border-black/10 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-900/95">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Outdoor Club
             </p>
-            <form action="/api/auth/logout" method="post">
-              <button
-                type="submit"
-                className="rounded-full bg-black px-5 py-2 text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            <h1 className="text-lg font-semibold">Upcoming Activities</h1>
+          </div>
+
+          {user ? (
+            <div className="flex items-center gap-3">
+              <p className="text-sm">Hi {user.username}</p>
+              <form action="/api/auth/logout" method="post">
+                <button
+                  type="submit"
+                  className="rounded-full border border-black/20 px-3 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
+                >
+                  Logout
+                </button>
+              </form>
+            </div>
+          ) : (
+            <nav className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="rounded-full border border-black/20 px-3 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
               >
-                Logout
-              </button>
-            </form>
-          </div>
-        ) : (
-          <div className="mt-8 flex gap-3">
-            <Link
-              href="/login"
-              className="rounded-full bg-black px-5 py-2 text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-            >
-              Login
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-full border border-black/20 px-5 py-2 transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
-            >
-              Sign up
-            </Link>
-          </div>
-        )}
+                Login
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-full bg-black px-3 py-1.5 text-sm text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+              >
+                Sign up
+              </Link>
+            </nav>
+          )}
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-3xl px-4 py-6">
+        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-900 sm:p-6">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">
+            A mobile-friendly vertical calendar view of planned club events.
+          </p>
+
+          {upcomingEvents.length === 0 ? (
+            <p className="mt-6 rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+              No upcoming activities yet. Once Trip Leaders add events, they will appear here.
+            </p>
+          ) : (
+            <>
+              {/* Vertical timeline keeps events easy to scan on mobile screens. */}
+              <ol className="mt-6 space-y-6 border-l border-zinc-300 pl-5 dark:border-zinc-700">
+                {upcomingEvents.map((event) => (
+                  <li key={event.id} className="relative">
+                    <span className="absolute -left-[1.72rem] top-1.5 h-3.5 w-3.5 rounded-full border border-white bg-zinc-700 dark:border-zinc-900 dark:bg-zinc-200" />
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {event.dateLabel}
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold">{event.title}</h2>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.timeLabel}</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.location}</p>
+                    <p className="mt-2 text-sm">{event.summary}</p>
+                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      Capacity: {event.maxParticipants}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+        </section>
       </main>
     </div>
   );
