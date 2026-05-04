@@ -6,12 +6,23 @@ import clientPromise from "@/lib/mongodb";
 
 const SESSION_COOKIE_NAME = "session_token";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
+const DEFAULT_ROLE: UserRole = "Member";
+
+export const USER_ROLES = ["Member", "TripLeader", "Admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
+const ROLE_RANK: Record<UserRole, number> = {
+  Member: 1,
+  TripLeader: 2,
+  Admin: 3,
+};
 
 type UserDoc = {
   _id: ObjectId;
   username: string;
   email: string;
   passwordHash: string;
+  role: UserRole;
   createdAt: Date;
 };
 
@@ -32,6 +43,28 @@ async function getDb() {
 // Normalizes email input for consistent storage and lookups.
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+// Converts stored role values into a known app role.
+function toUserRole(role: string | undefined): UserRole {
+  if (!role) return DEFAULT_ROLE;
+  if (USER_ROLES.includes(role as UserRole)) return role as UserRole;
+  return DEFAULT_ROLE;
+}
+
+// Checks whether the user's role meets or exceeds a minimum role.
+export function hasRequiredRole(userRole: UserRole, minimumRole: UserRole) {
+  return ROLE_RANK[userRole] >= ROLE_RANK[minimumRole];
+}
+
+// Returns true for users allowed to create/edit/delete activities.
+export function canManageActivities(userRole: UserRole) {
+  return hasRequiredRole(userRole, "TripLeader");
+}
+
+// Returns true for users allowed to assign roles.
+export function canManageRoles(userRole: UserRole) {
+  return hasRequiredRole(userRole, "Admin");
 }
 
 // Exposes the cookie key used to store the session token.
@@ -75,12 +108,14 @@ export async function createUser(params: {
     username,
     email,
     passwordHash,
+    role: DEFAULT_ROLE,
     createdAt: new Date(),
   });
 
   return {
     userId: result.insertedId,
     username,
+    role: DEFAULT_ROLE,
   };
 }
 
@@ -103,7 +138,15 @@ export async function authenticateUser(emailInput: string, password: string) {
   return {
     userId: user._id,
     username: user.username,
+    role: toUserRole(user.role),
   };
+}
+
+// Updates a user's role; intended for admin-only flows.
+export async function setUserRole(userId: string, role: UserRole) {
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  await users.updateOne({ _id: new ObjectId(userId) }, { $set: { role } });
 }
 
 // Creates a new session record and returns its token and expiry.
@@ -166,5 +209,6 @@ export async function getLoggedInUser() {
     id: user._id.toString(),
     username: user.username,
     email: user.email,
+    role: toUserRole(user.role),
   };
 }
