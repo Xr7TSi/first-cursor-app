@@ -9,6 +9,9 @@ type ActivityDoc = {
   location: string;
   summary: string;
   maxParticipants: number;
+  tripLeaderId: ObjectId;
+  participantIds: ObjectId[];
+  waitlistIds: ObjectId[];
   createdAt: Date;
 };
 
@@ -20,6 +23,16 @@ export type ActivityCard = {
   location: string;
   summary: string;
   maxParticipants: number;
+};
+
+export type CreateActivityInput = {
+  title: string;
+  startAt: string;
+  endAt: string;
+  location: string;
+  summary: string;
+  maxParticipants: number;
+  tripLeaderId: string;
 };
 
 // Returns the default MongoDB database from the shared client.
@@ -77,4 +90,48 @@ export async function getUpcomingActivityCards(limit = 20) {
     .toArray();
 
   return upcoming.map(toActivityCard);
+}
+
+// Validates and inserts a new activity document in MongoDB.
+export async function createActivity(input: CreateActivityInput) {
+  const title = input.title.trim();
+  const location = input.location.trim();
+  const summary = input.summary.trim();
+  const startAt = new Date(input.startAt);
+  const endAt = new Date(input.endAt);
+  const maxParticipants = Number(input.maxParticipants);
+
+  if (!title || !location || !summary) {
+    throw new Error("Title, location, and summary are required.");
+  }
+
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+    throw new Error("Start and end times must be valid dates.");
+  }
+
+  if (endAt <= startAt) {
+    throw new Error("End time must be after start time.");
+  }
+
+  if (!Number.isInteger(maxParticipants) || maxParticipants < 1) {
+    throw new Error("Max participants must be a whole number greater than 0.");
+  }
+
+  const db = await getDb();
+  const activities = db.collection<ActivityDoc>("activities");
+
+  const result = await activities.insertOne({
+    title,
+    startAt,
+    endAt,
+    location,
+    summary,
+    maxParticipants,
+    tripLeaderId: new ObjectId(input.tripLeaderId),
+    participantIds: [],
+    waitlistIds: [],
+    createdAt: new Date(),
+  });
+
+  return { id: result.insertedId.toString() };
 }
