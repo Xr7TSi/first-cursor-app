@@ -154,13 +154,6 @@ export async function authenticateUser(emailInput: string, password: string) {
   };
 }
 
-// Updates a user's role; intended for admin-only flows.
-export async function setUserRole(userId: string, role: UserRole) {
-  const db = await getDb();
-  const users = db.collection<UserDoc>("users");
-  await users.updateOne({ _id: new ObjectId(userId) }, { $set: { role } });
-}
-
 // Grants Admin role to the account that matches the provided email.
 export async function addAdminByEmail(emailInput: string) {
   const email = normalizeEmail(emailInput);
