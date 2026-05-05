@@ -271,6 +271,28 @@ export async function removeTripLeaderByEmail(emailInput: string) {
   await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
 }
 
+// Sets a user's role to Member for role reset/demotion workflows.
+export async function addMemberByEmail(emailInput: string, actingAdminId: string) {
+  const email = normalizeEmail(emailInput);
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  const user = await users.findOne({ email });
+
+  if (!user) {
+    throw new Error("No user found with that email.");
+  }
+
+  if (toUserRole(user.role) === "Member") {
+    throw new Error("That user is already a Member.");
+  }
+
+  if (user._id.toString() === actingAdminId) {
+    throw new Error("You cannot change your own role to Member.");
+  }
+
+  await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
+}
+
 // Returns a sorted list of users for the requested role.
 export async function listUsersByRole(role: UserRole): Promise<ManagedUser[]> {
   const db = await getDb();

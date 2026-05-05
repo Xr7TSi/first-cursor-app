@@ -1,14 +1,10 @@
 import Link from "next/link";
-import { canManageRoles, getLoggedInUser } from "@/lib/auth";
+import { canManageRoles, getLoggedInUser, listUsersByRole } from "@/lib/auth";
+import UserManagementClient from "@/app/admin/users/user-management-client";
 
-type AdminUsersPageProps = {
-  searchParams: Promise<{ error?: string; success?: string }>;
-};
-
-export default async function AdminUsersPage({ searchParams }: AdminUsersPageProps) {
+export default async function AdminUsersPage() {
   // Resolves auth/session before showing admin-only controls.
   const currentUser = await getLoggedInUser();
-  const params = await searchParams;
 
   if (!currentUser) {
     return (
@@ -42,8 +38,14 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
     );
   }
 
+  const [admins, tripLeaders, members] = await Promise.all([
+    listUsersByRole("Admin"),
+    listUsersByRole("TripLeader"),
+    listUsersByRole("Member"),
+  ]);
+
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8">
       <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
         <div className="mb-4">
           <Link
@@ -55,136 +57,9 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
         </div>
         <h1 className="text-2xl font-semibold">User management</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-          Use these forms to manage Admin and Trip Leader roles, and remove Member accounts.
+          Manage roles in columns, remove users inline, and search quickly by username or email.
         </p>
-
-        {params.success ? (
-          <p className="mt-4 rounded-lg bg-emerald-100 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-            {params.success}
-          </p>
-        ) : null}
-
-        {params.error ? (
-          <p className="mt-4 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
-            {params.error}
-          </p>
-        ) : null}
-
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Link
-            href="/admin/users/members"
-            className="rounded-full border border-black/20 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
-          >
-            See All Members
-          </Link>
-          <Link
-            href="/admin/users/trip-leaders"
-            className="rounded-full border border-black/20 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
-          >
-            See All Trip Leaders
-          </Link>
-          <Link
-            href="/admin/users/admins"
-            className="rounded-full border border-black/20 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
-          >
-            See All Admins
-          </Link>
-        </div>
-
-        <div className="mt-6 space-y-6">
-          <form action="/api/admin/add-admin" method="post" className="space-y-2">
-            <label htmlFor="add-admin-email" className="block text-sm font-medium">
-              Add admin (email)
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="add-admin-email"
-                name="email"
-                type="email"
-                required
-                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-              />
-              <button type="submit" className="rounded-full bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black">
-                Add admin
-              </button>
-            </div>
-          </form>
-
-          <form action="/api/admin/remove-admin" method="post" className="space-y-2">
-            <label htmlFor="remove-admin-email" className="block text-sm font-medium">
-              Remove admin (email)
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="remove-admin-email"
-                name="email"
-                type="email"
-                required
-                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-              />
-              <button type="submit" className="rounded-full border border-black/20 px-4 py-2 text-sm dark:border-white/30">
-                Remove admin
-              </button>
-            </div>
-          </form>
-
-          <form action="/api/admin/add-trip-leader" method="post" className="space-y-2">
-            <label htmlFor="add-trip-leader-email" className="block text-sm font-medium">
-              Add Trip Leader (email)
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="add-trip-leader-email"
-                name="email"
-                type="email"
-                required
-                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-              />
-              <button type="submit" className="rounded-full bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black">
-                Add Trip Leader
-              </button>
-            </div>
-          </form>
-
-          <form action="/api/admin/remove-trip-leader" method="post" className="space-y-2">
-            <label htmlFor="remove-trip-leader-email" className="block text-sm font-medium">
-              Remove Trip Leader (email)
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="remove-trip-leader-email"
-                name="email"
-                type="email"
-                required
-                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-              />
-              <button type="submit" className="rounded-full border border-black/20 px-4 py-2 text-sm dark:border-white/30">
-                Remove Trip Leader
-              </button>
-            </div>
-          </form>
-
-          <form action="/api/admin/remove-member" method="post" className="space-y-2">
-            <label htmlFor="remove-member-email" className="block text-sm font-medium">
-              Remove member (email)
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="remove-member-email"
-                name="email"
-                type="email"
-                required
-                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-              />
-              <button
-                type="submit"
-                className="rounded-full border border-red-300 px-4 py-2 text-sm text-red-700 dark:border-red-700 dark:text-red-300"
-              >
-                Remove member
-              </button>
-            </div>
-          </form>
-        </div>
+        <UserManagementClient admins={admins} tripLeaders={tripLeaders} members={members} />
       </section>
     </main>
   );

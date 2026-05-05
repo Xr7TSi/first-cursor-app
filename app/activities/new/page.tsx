@@ -47,7 +47,7 @@ export default async function CreateActivityPage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
-        <h1 className="text-2xl font-semibold">Create activity</h1>
+        <h1 className="text-2xl font-semibold">Create Activity</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
           Add a new event for members to view and join.
         </p>

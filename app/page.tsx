@@ -35,7 +35,7 @@ export default async function Home() {
                   href="/activities/new"
                   className="rounded-full bg-black px-3 py-1.5 text-sm text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
                 >
-                  Create
+                  Create Activity
                 </Link>
               ) : null}
               <form action="/api/auth/logout" method="post">
