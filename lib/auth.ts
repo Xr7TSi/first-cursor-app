@@ -8,7 +8,7 @@ const SESSION_COOKIE_NAME = "session_token";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
 const DEFAULT_ROLE: UserRole = "Member";
 
-export const USER_ROLES = ["Member", "TripLeader", "Admin"] as const;
+export const USER_ROLES = ["Member", "TripLeader", "Admin", "Owner"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 export type ManagedUser = {
   id: string;
@@ -21,6 +21,7 @@ const ROLE_RANK: Record<UserRole, number> = {
   Member: 1,
   TripLeader: 2,
   Admin: 3,
+  Owner: 4,
 };
 
 type UserDoc = {
@@ -79,6 +80,11 @@ export function canManageRoles(userRole: UserRole) {
   return hasRequiredRole(userRole, "Admin");
 }
 
+// Returns true only for the top-level owner account.
+export function canManageAdmins(userRole: UserRole) {
+  return userRole === "Owner";
+}
+
 // Exposes the cookie key used to store the session token.
 export function getSessionCookieName() {
   return SESSION_COOKIE_NAME;
@@ -109,25 +115,27 @@ export async function createUser(params: {
 
   const db = await getDb();
   const users = db.collection<UserDoc>("users");
+  const userCount = await users.countDocuments();
 
   const existingUser = await users.findOne({ email });
   if (existingUser) {
     throw new Error("An account with this email already exists.");
   }
 
+  const roleToAssign: UserRole = userCount === 0 ? "Owner" : DEFAULT_ROLE;
   const passwordHash = await bcrypt.hash(password, 12);
   const result = await users.insertOne({
     username,
     email,
     passwordHash,
-    role: DEFAULT_ROLE,
+    role: roleToAssign,
     createdAt: new Date(),
   });
 
   return {
     userId: result.insertedId,
     username,
-    role: DEFAULT_ROLE,
+    role: roleToAssign,
   };
 }
 
@@ -169,6 +177,10 @@ export async function addAdminByEmail(emailInput: string) {
     throw new Error("That user is already an Admin.");
   }
 
+  if (toUserRole(user.role) === "Owner") {
+    throw new Error("Owner already has all admin permissions.");
+  }
+
   await users.updateOne({ _id: user._id! }, { $set: { role: "Admin" } });
 }
 
@@ -188,7 +200,7 @@ export async function removeAdminByEmail(emailInput: string, actingAdminId: stri
   }
 
   if (user._id!.toString() === actingAdminId) {
-    throw new Error("You cannot remove your own Admin role.");
+    throw new Error("Use owner transfer instead of removing your own admin role.");
   }
 
   await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
@@ -279,6 +291,10 @@ export async function addMemberByEmail(emailInput: string, actingAdminId: string
     throw new Error("That user is already a Member.");
   }
 
+  if (toUserRole(user.role) === "Owner") {
+    throw new Error("Owner role cannot be changed to Member directly.");
+  }
+
   if (user._id!.toString() === actingAdminId) {
     throw new Error("You cannot change your own role to Member.");
   }
@@ -298,6 +314,30 @@ export async function listUsersByRole(role: UserRole): Promise<ManagedUser[]> {
     email: item.email,
     role: toUserRole(item.role),
   }));
+}
+
+// Transfers ownerhip to another account and ensures only one Owner remains.
+export async function transferOwnershipByEmail(actingOwnerId: string, targetEmailInput: string) {
+  const targetEmail = normalizeEmail(targetEmailInput);
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+
+  const actingOwner = await users.findOne({ _id: new ObjectId(actingOwnerId) });
+  if (!actingOwner || toUserRole(actingOwner.role) !== "Owner") {
+    throw new Error("Only the current Owner can transfer ownerhip.");
+  }
+
+  const targetUser = await users.findOne({ email: targetEmail });
+  if (!targetUser) {
+    throw new Error("No user found with that email.");
+  }
+
+  if (targetUser._id!.toString() === actingOwnerId) {
+    throw new Error("You are already the Owner.");
+  }
+
+  await users.updateMany({ role: "Owner" }, { $set: { role: "Admin" } });
+  await users.updateOne({ _id: targetUser._id! }, { $set: { role: "Owner" } });
 }
 
 // Creates a new session record and returns its token and expiry.

@@ -26,9 +26,9 @@ export default async function AdminUsersPage() {
     return (
       <main className="mx-auto w-full max-w-xl px-4 py-10">
         <div className="rounded-2xl border border-black/10 bg-white p-6 dark:border-white/10 dark:bg-zinc-900">
-          <h1 className="text-xl font-semibold">Admin only</h1>
+          <h1 className="text-xl font-semibold">Restricted</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-            Only Admin users can access these controls.
+            Only Admin and Owner users can access these controls.
           </p>
           <Link href="/" className="mt-4 inline-block underline">
             Back to home
@@ -38,7 +38,8 @@ export default async function AdminUsersPage() {
     );
   }
 
-  const [admins, tripLeaders, members] = await Promise.all([
+  const [owners, admins, tripLeaders, members] = await Promise.all([
+    listUsersByRole("Owner"),
     listUsersByRole("Admin"),
     listUsersByRole("TripLeader"),
     listUsersByRole("Member"),
@@ -59,7 +60,13 @@ export default async function AdminUsersPage() {
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
           Manage roles in columns, remove users inline, and search quickly by username or email.
         </p>
-        <UserManagementClient admins={admins} tripLeaders={tripLeaders} members={members} />
+        <UserManagementClient
+          currentUserRole={currentUser.role}
+          owners={owners}
+          admins={admins}
+          tripLeaders={tripLeaders}
+          members={members}
+        />
       </section>
     </main>
   );

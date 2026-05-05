@@ -19,7 +19,6 @@ export default async function Home() {
             <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Outdoor Club
             </p>
-            <h1 className="text-lg font-semibold">Upcoming Activities</h1>
           </div>
 
           {user ? (
@@ -71,9 +70,7 @@ export default async function Home() {
 
       <main className="mx-auto w-full max-w-3xl px-4 py-6">
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-900 sm:p-6">
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            A mobile-friendly vertical calendar view of planned club events.
-          </p>
+          <h1 className="text-lg font-semibold">Upcoming Activities</h1>
 
           {upcomingEvents.length === 0 ? (
             <p className="mt-6 rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">

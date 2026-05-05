@@ -2,17 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ManagedUser } from "@/lib/auth";
+import type { ManagedUser, UserRole } from "@/lib/auth";
 
 type AdminAction =
   | "addAdmin"
-  | "removeAdmin"
   | "addTripLeader"
-  | "removeTripLeader"
   | "addMember"
-  | "removeMember";
+  | "removeAdmin"
+  | "transferOwner";
 
 type UserManagementClientProps = {
+  currentUserRole: UserRole;
+  owners: ManagedUser[];
   admins: ManagedUser[];
   tripLeaders: ManagedUser[];
   members: ManagedUser[];
@@ -21,9 +22,12 @@ type UserManagementClientProps = {
 type RoleColumnProps = {
   title: string;
   createLabel: string;
+  showSearch?: boolean;
+  showCreate?: boolean;
+  addConfirmMessage?: string;
   users: ManagedUser[];
   addAction: AdminAction;
-  removeAction: AdminAction;
+  removeAction?: AdminAction;
   addButtonLabel: string;
   removeButtonLabel: string;
   removeConfirmMessage: string;
@@ -36,6 +40,9 @@ const MOBILE_VISIBLE_USERS = 6;
 function RoleColumn({
   title,
   createLabel,
+  showSearch = true,
+  showCreate = true,
+  addConfirmMessage,
   users,
   addAction,
   removeAction,
@@ -79,47 +86,52 @@ function RoleColumn({
   return (
     <section className="rounded-xl border border-black/10 p-4 dark:border-white/10">
       <h2 className="text-lg font-semibold">{title}</h2>
-      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{users.length} users</p>
 
-      <div className="mt-3 space-y-1">
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300">
-          Search {title}
-        </label>
-        <input
-          type="text"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={`Search ${title.toLowerCase()}`}
-          className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 text-sm outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-        />
-      </div>
-
-      <div className="mt-3 flex gap-2">
-        <div className="w-full">
-          <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300">
-            {createLabel}
+      {showSearch ? (
+        <div className="mt-3 space-y-1">
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300">
+            Search {title}
           </label>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="user@email.com"
-              className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 text-sm outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
-            />
-            <button
-              type="button"
-              onClick={async () => {
-                await onAction(addAction, email);
-                setEmail("");
-              }}
-              className="rounded-full bg-black px-3 py-2 text-xs text-white dark:bg-white dark:text-black"
-            >
-              {addButtonLabel}
-            </button>
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={`Search ${title.toLowerCase()}`}
+            className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 text-sm outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
+          />
+        </div>
+      ) : null}
+
+      {showCreate ? (
+        <div className="mt-3 flex gap-2">
+          <div className="w-full">
+            <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              {createLabel}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="user@email.com"
+                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 text-sm outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  await onAction(addAction, email, {
+                    confirmMessage: addConfirmMessage,
+                  });
+                  setEmail("");
+                }}
+                className="rounded-full bg-black px-3 py-2 text-xs text-white dark:bg-white dark:text-black"
+              >
+                {addButtonLabel}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="mt-5 border-t border-dashed border-black/20 pt-4 dark:border-white/20">
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -147,17 +159,19 @@ function RoleColumn({
                 <p className="text-sm font-medium">{user.username}</p>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300">{user.email}</p>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  onAction(removeAction, user.email, {
-                    confirmMessage: removeConfirmMessage.replace("{email}", user.email),
-                  })
-                }
-                className="rounded-full border border-red-300 px-2.5 py-1 text-xs text-red-700 dark:border-red-700 dark:text-red-300"
-              >
-                {removeButtonLabel}
-              </button>
+              {removeAction ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onAction(removeAction, user.email, {
+                      confirmMessage: removeConfirmMessage.replace("{email}", user.email),
+                    })
+                  }
+                  className="rounded-full border border-red-300 px-2.5 py-1 text-xs text-red-700 dark:border-red-700 dark:text-red-300"
+                >
+                  {removeButtonLabel}
+                </button>
+              ) : null}
             </li>
           ))}
           </ul>
@@ -168,6 +182,8 @@ function RoleColumn({
 }
 
 export default function UserManagementClient({
+  currentUserRole,
+  owners,
   admins,
   tripLeaders,
   members,
@@ -233,13 +249,26 @@ export default function UserManagementClient({
         </p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-4">
+        <RoleColumn
+          title="Owner"
+          createLabel="Transfer Ownership"
+          showSearch={false}
+          showCreate={currentUserRole === "Owner"}
+          addConfirmMessage="Are you sure you want to transfer Owner role to this user?"
+          users={owners}
+          addAction="transferOwner"
+          addButtonLabel="Transfer"
+          removeButtonLabel="Remove"
+          removeConfirmMessage=""
+          onAction={handleAction}
+        />
         <RoleColumn
           title="Admins"
           createLabel="Create Admin"
           users={admins}
           addAction="addAdmin"
-          removeAction="removeAdmin"
+          removeAction={currentUserRole === "Owner" ? "removeAdmin" : undefined}
           addButtonLabel="Add"
           removeButtonLabel="Remove"
           removeConfirmMessage="Are you sure you want to remove Admin role from {email}?"
@@ -250,7 +279,6 @@ export default function UserManagementClient({
           createLabel="Create Trip Leader"
           users={tripLeaders}
           addAction="addTripLeader"
-          removeAction="removeTripLeader"
           addButtonLabel="Add"
           removeButtonLabel="Remove"
           removeConfirmMessage="Are you sure you want to remove Trip Leader role from {email}?"
@@ -261,7 +289,6 @@ export default function UserManagementClient({
           createLabel="Create Member"
           users={members}
           addAction="addMember"
-          removeAction="removeMember"
           addButtonLabel="Add"
           removeButtonLabel="Delete"
           removeConfirmMessage="Are you sure you want to delete member account {email}?"

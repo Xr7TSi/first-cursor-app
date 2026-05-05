@@ -2,20 +2,19 @@ import {
   addAdminByEmail,
   addMemberByEmail,
   addTripLeaderByEmail,
+  canManageAdmins,
   canManageRoles,
   getLoggedInUser,
   removeAdminByEmail,
-  removeMemberByEmail,
-  removeTripLeaderByEmail,
+  transferOwnershipByEmail,
 } from "@/lib/auth";
 
 type AdminAction =
   | "addAdmin"
-  | "removeAdmin"
   | "addTripLeader"
-  | "removeTripLeader"
   | "addMember"
-  | "removeMember";
+  | "removeAdmin"
+  | "transferOwner";
 
 type RequestBody = {
   action?: AdminAction;
@@ -48,13 +47,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Action and email are required." }, { status: 400 });
   }
 
+  if ((action === "removeAdmin" || action === "transferOwner") && !canManageAdmins(currentUser.role)) {
+    return Response.json({ error: "Only the Owner can perform that action." }, { status: 403 });
+  }
+
   try {
     if (action === "addAdmin") await addAdminByEmail(email);
-    if (action === "removeAdmin") await removeAdminByEmail(email, currentUser.id);
     if (action === "addTripLeader") await addTripLeaderByEmail(email);
-    if (action === "removeTripLeader") await removeTripLeaderByEmail(email);
     if (action === "addMember") await addMemberByEmail(email, currentUser.id);
-    if (action === "removeMember") await removeMemberByEmail(email);
+    if (action === "removeAdmin") await removeAdminByEmail(email, currentUser.id);
+    if (action === "transferOwner") await transferOwnershipByEmail(currentUser.id, email);
 
     return Response.json({ ok: true });
   } catch (error) {
