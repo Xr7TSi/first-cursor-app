@@ -28,6 +28,9 @@ export type ActivityCard = {
   summary: string;
   maxParticipants: number;
   tripLeaderName: string;
+  spotsFilled: number;
+  isSignedUp: boolean;
+  isFull: boolean;
 };
 
 export type ActivityWithTripLeader = {
@@ -52,6 +55,11 @@ export type CreateActivityInput = {
   summary: string;
   maxParticipants: number;
   tripLeaderId: string;
+};
+
+type SignupActivityResult = {
+  spotsFilled: number;
+  maxParticipants: number;
 };
 
 // Returns the default MongoDB database from the shared client.
@@ -85,9 +93,10 @@ function formatTimeLabel(startAt: Date, endAt: Date) {
 }
 
 // Reads future activities sorted by start time for the home page.
-export async function getUpcomingActivityCards(limit = 20) {
+export async function getUpcomingActivityCards(limit = 20, currentUserId?: string) {
   const db = await getDb();
   const activities = db.collection<ActivityDoc>("activities");
+  const currentUserObjectId = currentUserId ? new ObjectId(currentUserId) : null;
 
   const upcoming = await activities
     .aggregate<{
@@ -100,6 +109,7 @@ export async function getUpcomingActivityCards(limit = 20) {
       summary: string;
       maxParticipants: number;
       tripLeaderName?: string;
+      participantIds: ObjectId[];
     }>([
       { $match: { startAt: { $gte: new Date() } } },
       { $sort: { startAt: 1 } },
@@ -131,6 +141,66 @@ export async function getUpcomingActivityCards(limit = 20) {
     summary: activity.summary,
     maxParticipants: activity.maxParticipants,
     tripLeaderName: activity.tripLeaderName ?? "Unknown",
+    spotsFilled: activity.participantIds.length,
+    isSignedUp: currentUserObjectId
+      ? activity.participantIds.some((id) => id.equals(currentUserObjectId))
+      : false,
+    isFull: activity.participantIds.length >= activity.maxParticipants,
+  }));
+}
+
+// Reads all activities a user has signed up for.
+export async function getSignedUpActivityCards(userId: string, limit = 100) {
+  const db = await getDb();
+  const activities = db.collection<ActivityDoc>("activities");
+  const userObjectId = new ObjectId(userId);
+
+  const signedUp = await activities
+    .aggregate<{
+      _id: ObjectId;
+      title: string;
+      activityType: ActivityType;
+      startAt: Date;
+      endAt: Date;
+      location: string;
+      summary: string;
+      maxParticipants: number;
+      tripLeaderName?: string;
+      participantIds: ObjectId[];
+    }>([
+      { $match: { participantIds: userObjectId } },
+      { $sort: { startAt: 1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "tripLeaderId",
+          foreignField: "_id",
+          as: "tripLeader",
+        },
+      },
+      {
+        $addFields: {
+          tripLeaderName: { $ifNull: [{ $arrayElemAt: ["$tripLeader.username", 0] }, "Unknown"] },
+        },
+      },
+      { $project: { tripLeader: 0 } },
+    ])
+    .toArray();
+
+  return signedUp.map((activity) => ({
+    id: activity._id.toString(),
+    title: activity.title,
+    activityType: activity.activityType,
+    dateLabel: formatDateLabel(activity.startAt),
+    timeLabel: formatTimeLabel(activity.startAt, activity.endAt),
+    location: activity.location,
+    summary: activity.summary,
+    maxParticipants: activity.maxParticipants,
+    tripLeaderName: activity.tripLeaderName ?? "Unknown",
+    spotsFilled: activity.participantIds.length,
+    isSignedUp: true,
+    isFull: activity.participantIds.length >= activity.maxParticipants,
   }));
 }
 
@@ -237,4 +307,61 @@ export async function createActivity(input: CreateActivityInput) {
   });
 
   return { id: result.insertedId.toString() };
+}
+
+// Adds a user to an activity if capacity remains and user is not already signed up.
+export async function signupForActivity(activityId: string, userId: string): Promise<SignupActivityResult> {
+  const db = await getDb();
+  const activities = db.collection<ActivityDoc>("activities");
+
+  const parsedActivityId = new ObjectId(activityId);
+  const parsedUserId = new ObjectId(userId);
+  const activity = await activities.findOne({ _id: parsedActivityId });
+
+  if (!activity) {
+    throw new Error("Activity not found.");
+  }
+
+  const alreadySignedUp = activity.participantIds.some((id) => id.equals(parsedUserId));
+  if (alreadySignedUp) {
+    throw new Error("You are already signed up for this activity.");
+  }
+
+  if (activity.participantIds.length >= activity.maxParticipants) {
+    throw new Error("This activity is full.");
+  }
+
+  await activities.updateOne(
+    { _id: parsedActivityId },
+    { $addToSet: { participantIds: parsedUserId } },
+  );
+
+  return {
+    spotsFilled: activity.participantIds.length + 1,
+    maxParticipants: activity.maxParticipants,
+  };
+}
+
+// Removes a user from an activity's participant list.
+export async function cancelSignupForActivity(activityId: string, userId: string): Promise<void> {
+  const db = await getDb();
+  const activities = db.collection<ActivityDoc>("activities");
+
+  const parsedActivityId = new ObjectId(activityId);
+  const parsedUserId = new ObjectId(userId);
+  const activity = await activities.findOne({ _id: parsedActivityId });
+
+  if (!activity) {
+    throw new Error("Activity not found.");
+  }
+
+  const isSignedUp = activity.participantIds.some((id) => id.equals(parsedUserId));
+  if (!isSignedUp) {
+    throw new Error("You are not signed up for this activity.");
+  }
+
+  await activities.updateOne(
+    { _id: parsedActivityId },
+    { $pull: { participantIds: parsedUserId } },
+  );
 }

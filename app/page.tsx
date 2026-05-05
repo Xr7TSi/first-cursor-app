@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { canManageActivities, canManageRoles, getLoggedInUser } from "@/lib/auth";
-import { getUpcomingActivityCards } from "@/lib/activities";
+import { getSignedUpActivityCards, getUpcomingActivityCards } from "@/lib/activities";
+import ConfirmActionForm from "@/app/components/confirm-action-form";
 
 // Roughly how many activity cards stay visible before scrolling (mobile-friendly).
 const VISIBLE_ACTIVITY_SLOTS = 4;
@@ -9,7 +10,8 @@ export default async function Home() {
   // Reads the signed-in user (if any) to render auth actions in the header.
   const user = await getLoggedInUser();
   // Loads upcoming activities from MongoDB for the timeline cards.
-  const upcomingEvents = await getUpcomingActivityCards();
+  const upcomingEvents = await getUpcomingActivityCards(20, user?.id);
+  const myActivities = user ? await getSignedUpActivityCards(user.id) : [];
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -69,6 +71,52 @@ export default async function Home() {
       </header>
 
       <main className="mx-auto w-full max-w-3xl px-4 py-6">
+        {user ? (
+          <section className="mb-4 rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-900 sm:p-6">
+            <h1 className="text-lg font-semibold">My Activities</h1>
+            {myActivities.length === 0 ? (
+              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+                You are not signed up for any activities yet.
+              </p>
+            ) : (
+              <div
+                className="mt-4 overflow-y-auto pr-2"
+                style={{ maxHeight: `${VISIBLE_ACTIVITY_SLOTS * 9}rem` }}
+              >
+                <ul className="space-y-3">
+                  {myActivities.map((activity) => (
+                    <li
+                      key={activity.id}
+                      className="rounded-lg border border-black/10 p-3 dark:border-white/10"
+                    >
+                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        {activity.dateLabel}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                        {activity.timeLabel}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold">{activity.title}</p>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        Trip Leader: {activity.tripLeaderName}
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        {activity.spotsFilled} of {activity.maxParticipants} spots filled
+                      </p>
+                      <div className="mt-2">
+                        <ConfirmActionForm
+                          action={`/api/activities/${activity.id}/cancel-signup`}
+                          buttonLabel="Cancel Sign Up"
+                          confirmMessage="Are you sure you want to cancel this signup?"
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        ) : null}
+
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-900 sm:p-6">
           <h1 className="text-lg font-semibold">Upcoming Activities</h1>
 
@@ -103,8 +151,23 @@ export default async function Home() {
                         Trip Leader: {event.tripLeaderName}
                       </p>
                       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                        Capacity: {event.maxParticipants}
+                        {event.spotsFilled} of {event.maxParticipants} spots filled
                       </p>
+                      {user ? (
+                        <form action={`/api/activities/${event.id}/signup`} method="post" className="mt-2">
+                          <button
+                            type="submit"
+                            disabled={event.isFull || event.isSignedUp}
+                            className="rounded-full bg-black px-4 py-1.5 text-xs text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                          >
+                            {event.isSignedUp ? "Signed Up" : event.isFull ? "Full" : "Sign Up"}
+                          </button>
+                        </form>
+                      ) : (
+                        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                          Log in to sign up.
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ol>
