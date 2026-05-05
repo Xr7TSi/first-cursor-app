@@ -225,6 +225,46 @@ export async function removeMemberByEmail(emailInput: string) {
   );
 }
 
+// Grants TripLeader role to the account that matches the provided email.
+export async function addTripLeaderByEmail(emailInput: string) {
+  const email = normalizeEmail(emailInput);
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  const user = await users.findOne({ email });
+
+  if (!user) {
+    throw new Error("No user found with that email.");
+  }
+
+  if (toUserRole(user.role) === "TripLeader") {
+    throw new Error("That user is already a Trip Leader.");
+  }
+
+  if (toUserRole(user.role) === "Admin") {
+    throw new Error("Admins already have Trip Leader permissions.");
+  }
+
+  await users.updateOne({ _id: user._id }, { $set: { role: "TripLeader" } });
+}
+
+// Removes TripLeader role from a user and sets their role back to Member.
+export async function removeTripLeaderByEmail(emailInput: string) {
+  const email = normalizeEmail(emailInput);
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  const user = await users.findOne({ email });
+
+  if (!user) {
+    throw new Error("No user found with that email.");
+  }
+
+  if (toUserRole(user.role) !== "TripLeader") {
+    throw new Error("That user is not a Trip Leader.");
+  }
+
+  await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
+}
+
 // Creates a new session record and returns its token and expiry.
 export async function createSession(userId: ObjectId) {
   const token = randomBytes(32).toString("hex");

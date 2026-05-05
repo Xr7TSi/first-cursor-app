@@ -47,7 +47,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
       <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
         <h1 className="text-2xl font-semibold">User management</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-          Use these forms to add/remove Admin permissions and remove Member accounts.
+          Use these forms to manage Admin and Trip Leader roles, and remove Member accounts.
         </p>
 
         {params.success ? (
@@ -95,6 +95,42 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
               />
               <button type="submit" className="rounded-full border border-black/20 px-4 py-2 text-sm dark:border-white/30">
                 Remove admin
+              </button>
+            </div>
+          </form>
+
+          <form action="/api/admin/add-trip-leader" method="post" className="space-y-2">
+            <label htmlFor="add-trip-leader-email" className="block text-sm font-medium">
+              Add Trip Leader (email)
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="add-trip-leader-email"
+                name="email"
+                type="email"
+                required
+                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
+              />
+              <button type="submit" className="rounded-full bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black">
+                Add Trip Leader
+              </button>
+            </div>
+          </form>
+
+          <form action="/api/admin/remove-trip-leader" method="post" className="space-y-2">
+            <label htmlFor="remove-trip-leader-email" className="block text-sm font-medium">
+              Remove Trip Leader (email)
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="remove-trip-leader-email"
+                name="email"
+                type="email"
+                required
+                className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
+              />
+              <button type="submit" className="rounded-full border border-black/20 px-4 py-2 text-sm dark:border-white/30">
+                Remove Trip Leader
               </button>
             </div>
           </form>
