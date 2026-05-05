@@ -93,13 +93,18 @@ export default async function Home() {
                       <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                         {event.dateLabel}
                       </p>
-                      <h2 className="mt-1 text-lg font-semibold">{event.title}</h2>
+                      <p className="mt-1 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                        {event.timeLabel}
+                      </p>
                       <p className="mt-1 inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
                         {event.activityType}
                       </p>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.timeLabel}</p>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.location}</p>
+                      <h2 className="mt-2 text-lg font-semibold">{event.title}</h2>
+                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{event.location}</p>
                       <p className="mt-2 text-sm">{event.summary}</p>
+                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                        Trip Leader: {event.tripLeaderName}
+                      </p>
                       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
                         Capacity: {event.maxParticipants}
                       </p>

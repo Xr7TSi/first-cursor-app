@@ -1,5 +1,5 @@
 import { canManageActivities, getLoggedInUser } from "@/lib/auth";
-import { createActivity } from "@/lib/activities";
+import { createActivity, getActivitiesWithTripLeader } from "@/lib/activities";
 
 type CreateActivityRequestBody = {
   title?: string;
@@ -10,6 +10,16 @@ type CreateActivityRequestBody = {
   summary?: string;
   maxParticipants?: number;
 };
+
+// Returns activities with the trip leader name included in each record.
+export async function GET() {
+  try {
+    const activities = await getActivitiesWithTripLeader();
+    return Response.json({ ok: true, activities });
+  } catch {
+    return Response.json({ error: "Unable to fetch activities." }, { status: 500 });
+  }
+}
 
 // Creates a new activity; only Trip Leaders and Admins are allowed.
 export async function POST(request: Request) {

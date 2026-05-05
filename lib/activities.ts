@@ -27,6 +27,20 @@ export type ActivityCard = {
   location: string;
   summary: string;
   maxParticipants: number;
+  tripLeaderName: string;
+};
+
+export type ActivityWithTripLeader = {
+  id: string;
+  title: string;
+  activityType: ActivityType;
+  startAt: Date;
+  endAt: Date;
+  location: string;
+  summary: string;
+  maxParticipants: number;
+  tripLeaderId: string;
+  tripLeaderName: string;
 };
 
 export type CreateActivityInput = {
@@ -70,10 +84,45 @@ function formatTimeLabel(startAt: Date, endAt: Date) {
   return `${start} - ${end}`;
 }
 
-// Converts an activity document into the UI card shape.
-function toActivityCard(activity: ActivityDoc): ActivityCard {
-  return {
-    id: activity._id!.toString(),
+// Reads future activities sorted by start time for the home page.
+export async function getUpcomingActivityCards(limit = 20) {
+  const db = await getDb();
+  const activities = db.collection<ActivityDoc>("activities");
+
+  const upcoming = await activities
+    .aggregate<{
+      _id: ObjectId;
+      title: string;
+      activityType: ActivityType;
+      startAt: Date;
+      endAt: Date;
+      location: string;
+      summary: string;
+      maxParticipants: number;
+      tripLeaderName?: string;
+    }>([
+      { $match: { startAt: { $gte: new Date() } } },
+      { $sort: { startAt: 1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "tripLeaderId",
+          foreignField: "_id",
+          as: "tripLeader",
+        },
+      },
+      {
+        $addFields: {
+          tripLeaderName: { $ifNull: [{ $arrayElemAt: ["$tripLeader.username", 0] }, "Unknown"] },
+        },
+      },
+      { $project: { tripLeader: 0 } },
+    ])
+    .toArray();
+
+  return upcoming.map((activity) => ({
+    id: activity._id.toString(),
     title: activity.title,
     activityType: activity.activityType,
     dateLabel: formatDateLabel(activity.startAt),
@@ -81,21 +130,63 @@ function toActivityCard(activity: ActivityDoc): ActivityCard {
     location: activity.location,
     summary: activity.summary,
     maxParticipants: activity.maxParticipants,
-  };
+    tripLeaderName: activity.tripLeaderName ?? "Unknown",
+  }));
 }
 
-// Reads future activities sorted by start time for the home page.
-export async function getUpcomingActivityCards(limit = 20) {
+// Returns activities with the creating trip leader's username.
+export async function getActivitiesWithTripLeader(limit = 100) {
   const db = await getDb();
   const activities = db.collection<ActivityDoc>("activities");
 
-  const upcoming = await activities
-    .find({ startAt: { $gte: new Date() } })
-    .sort({ startAt: 1 })
-    .limit(limit)
+  const results = await activities
+    .aggregate<{
+      _id: ObjectId;
+      title: string;
+      activityType: ActivityType;
+      startAt: Date;
+      endAt: Date;
+      location: string;
+      summary: string;
+      maxParticipants: number;
+      tripLeaderId: ObjectId;
+      tripLeaderName?: string;
+    }>([
+      { $sort: { startAt: 1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "tripLeaderId",
+          foreignField: "_id",
+          as: "tripLeader",
+        },
+      },
+      {
+        $addFields: {
+          tripLeaderName: { $ifNull: [{ $arrayElemAt: ["$tripLeader.username", 0] }, "Unknown"] },
+        },
+      },
+      {
+        $project: {
+          tripLeader: 0,
+        },
+      },
+    ])
     .toArray();
 
-  return upcoming.map(toActivityCard);
+  return results.map((item) => ({
+    id: item._id.toString(),
+    title: item.title,
+    activityType: item.activityType,
+    startAt: item.startAt,
+    endAt: item.endAt,
+    location: item.location,
+    summary: item.summary,
+    maxParticipants: item.maxParticipants,
+    tripLeaderId: item.tripLeaderId.toString(),
+    tripLeaderName: item.tripLeaderName ?? "Unknown",
+  })) satisfies ActivityWithTripLeader[];
 }
 
 // Validates and inserts a new activity document in MongoDB.
