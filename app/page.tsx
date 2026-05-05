@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { canManageActivities, getLoggedInUser } from "@/lib/auth";
+import { canManageActivities, canManageRoles, getLoggedInUser } from "@/lib/auth";
 import { getUpcomingActivityCards } from "@/lib/activities";
 
 export default async function Home() {
@@ -22,6 +22,28 @@ export default async function Home() {
           {user ? (
             <div className="flex items-center gap-3">
               <p className="text-sm">Hi {user.username}</p>
+              {canManageRoles(user.role) ? (
+                <>
+                  <Link
+                    href="/admin/users"
+                    className="rounded-full border border-black/20 px-3 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
+                  >
+                    Add admin
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className="rounded-full border border-black/20 px-3 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
+                  >
+                    Remove admin
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className="rounded-full border border-red-300 px-3 py-1.5 text-sm text-red-700 transition hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950/30"
+                  >
+                    Remove member
+                  </Link>
+                </>
+              ) : null}
               {canManageActivities(user.role) ? (
                 <Link
                   href="/activities/new"

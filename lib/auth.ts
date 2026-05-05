@@ -34,6 +34,12 @@ type SessionDoc = {
   createdAt: Date;
 };
 
+type ActivityDoc = {
+  _id: ObjectId;
+  participantIds: ObjectId[];
+  waitlistIds: ObjectId[];
+};
+
 // Returns the default MongoDB database from the shared client.
 async function getDb() {
   const client = await clientPromise;
@@ -147,6 +153,76 @@ export async function setUserRole(userId: string, role: UserRole) {
   const db = await getDb();
   const users = db.collection<UserDoc>("users");
   await users.updateOne({ _id: new ObjectId(userId) }, { $set: { role } });
+}
+
+// Grants Admin role to the account that matches the provided email.
+export async function addAdminByEmail(emailInput: string) {
+  const email = normalizeEmail(emailInput);
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  const user = await users.findOne({ email });
+
+  if (!user) {
+    throw new Error("No user found with that email.");
+  }
+
+  if (toUserRole(user.role) === "Admin") {
+    throw new Error("That user is already an Admin.");
+  }
+
+  await users.updateOne({ _id: user._id }, { $set: { role: "Admin" } });
+}
+
+// Removes Admin role from a user and sets their role back to Member.
+export async function removeAdminByEmail(emailInput: string, actingAdminId: string) {
+  const email = normalizeEmail(emailInput);
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  const user = await users.findOne({ email });
+
+  if (!user) {
+    throw new Error("No user found with that email.");
+  }
+
+  if (toUserRole(user.role) !== "Admin") {
+    throw new Error("That user is not an Admin.");
+  }
+
+  if (user._id.toString() === actingAdminId) {
+    throw new Error("You cannot remove your own Admin role.");
+  }
+
+  await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
+}
+
+// Removes a Member account and its active sessions from the database.
+export async function removeMemberByEmail(emailInput: string) {
+  const email = normalizeEmail(emailInput);
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  const sessions = db.collection<SessionDoc>("sessions");
+  const activities = db.collection<ActivityDoc>("activities");
+  const user = await users.findOne({ email });
+
+  if (!user) {
+    throw new Error("No user found with that email.");
+  }
+
+  if (toUserRole(user.role) !== "Member") {
+    throw new Error("Only users with Member role can be removed here.");
+  }
+
+  await users.deleteOne({ _id: user._id });
+  await sessions.deleteMany({ userId: user._id });
+  await activities.updateMany(
+    {},
+    {
+      $pull: {
+        participantIds: user._id,
+        waitlistIds: user._id,
+      },
+    },
+  );
 }
 
 // Creates a new session record and returns its token and expiry.
