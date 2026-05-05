@@ -45,6 +45,14 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8">
       <section className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="inline-block rounded-full border border-black/20 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
+          >
+            Home
+          </Link>
+        </div>
         <h1 className="text-2xl font-semibold">User management</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
           Use these forms to manage Admin and Trip Leader roles, and remove Member accounts.
@@ -61,6 +69,27 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
             {params.error}
           </p>
         ) : null}
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Link
+            href="/admin/users/members"
+            className="rounded-full border border-black/20 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
+          >
+            See All Members
+          </Link>
+          <Link
+            href="/admin/users/trip-leaders"
+            className="rounded-full border border-black/20 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
+          >
+            See All Trip Leaders
+          </Link>
+          <Link
+            href="/admin/users/admins"
+            className="rounded-full border border-black/20 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-white/30 dark:hover:bg-zinc-800"
+          >
+            See All Admins
+          </Link>
+        </div>
 
         <div className="mt-6 space-y-6">
           <form action="/api/admin/add-admin" method="post" className="space-y-2">

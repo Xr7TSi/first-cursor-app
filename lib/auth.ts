@@ -10,6 +10,12 @@ const DEFAULT_ROLE: UserRole = "Member";
 
 export const USER_ROLES = ["Member", "TripLeader", "Admin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
+export type ManagedUser = {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+};
 
 const ROLE_RANK: Record<UserRole, number> = {
   Member: 1,
@@ -263,6 +269,20 @@ export async function removeTripLeaderByEmail(emailInput: string) {
   }
 
   await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
+}
+
+// Returns a sorted list of users for the requested role.
+export async function listUsersByRole(role: UserRole): Promise<ManagedUser[]> {
+  const db = await getDb();
+  const users = db.collection<UserDoc>("users");
+  const items = await users.find({ role }).sort({ username: 1 }).toArray();
+
+  return items.map((item) => ({
+    id: item._id.toString(),
+    username: item.username,
+    email: item.email,
+    role: toUserRole(item.role),
+  }));
 }
 
 // Creates a new session record and returns its token and expiry.
