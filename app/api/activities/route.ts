@@ -3,6 +3,7 @@ import { createActivity } from "@/lib/activities";
 
 type CreateActivityRequestBody = {
   title?: string;
+  activityType?: string;
   startAt?: string;
   endAt?: string;
   location?: string;
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
   try {
     const activity = await createActivity({
       title: body.title ?? "",
+      activityType: body.activityType ?? "",
       startAt: body.startAt ?? "",
       endAt: body.endAt ?? "",
       location: body.location ?? "",

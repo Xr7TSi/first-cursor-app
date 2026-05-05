@@ -2,6 +2,9 @@ import Link from "next/link";
 import { canManageActivities, canManageRoles, getLoggedInUser } from "@/lib/auth";
 import { getUpcomingActivityCards } from "@/lib/activities";
 
+// Roughly how many activity cards stay visible before scrolling (mobile-friendly).
+const VISIBLE_ACTIVITY_SLOTS = 4;
+
 export default async function Home() {
   // Reads the signed-in user (if any) to render auth actions in the header.
   const user = await getLoggedInUser();
@@ -78,24 +81,32 @@ export default async function Home() {
             </p>
           ) : (
             <>
-              {/* Vertical timeline keeps events easy to scan on mobile screens. */}
-              <ol className="mt-6 space-y-6 border-l border-zinc-300 pl-5 dark:border-zinc-700">
-                {upcomingEvents.map((event) => (
-                  <li key={event.id} className="relative">
-                    <span className="absolute -left-[1.72rem] top-1.5 h-3.5 w-3.5 rounded-full border border-white bg-zinc-700 dark:border-zinc-900 dark:bg-zinc-200" />
-                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      {event.dateLabel}
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold">{event.title}</h2>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.timeLabel}</p>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.location}</p>
-                    <p className="mt-2 text-sm">{event.summary}</p>
-                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      Capacity: {event.maxParticipants}
-                    </p>
-                  </li>
-                ))}
-              </ol>
+              {/* Scrollable area: shows ~4 cards on a typical phone; scrollbar for the rest. */}
+              <div
+                className="mt-6 overflow-y-auto pr-2"
+                style={{ maxHeight: `${VISIBLE_ACTIVITY_SLOTS * 9}rem` }}
+              >
+                <ol className="space-y-6 border-l border-zinc-300 pl-5 dark:border-zinc-700">
+                  {upcomingEvents.map((event) => (
+                    <li key={event.id} className="relative">
+                      <span className="absolute -left-[1.72rem] top-1.5 h-3.5 w-3.5 rounded-full border border-white bg-zinc-700 dark:border-zinc-900 dark:bg-zinc-200" />
+                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        {event.dateLabel}
+                      </p>
+                      <h2 className="mt-1 text-lg font-semibold">{event.title}</h2>
+                      <p className="mt-1 inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                        {event.activityType}
+                      </p>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.timeLabel}</p>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-300">{event.location}</p>
+                      <p className="mt-2 text-sm">{event.summary}</p>
+                      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        Capacity: {event.maxParticipants}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </>
           )}
         </section>

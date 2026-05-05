@@ -1,9 +1,12 @@
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 
+import { ACTIVITY_TYPES, type ActivityType } from "@/lib/activity-types";
+
 type ActivityDoc = {
-  _id: ObjectId;
+  _id?: ObjectId;
   title: string;
+  activityType: ActivityType;
   startAt: Date;
   endAt: Date;
   location: string;
@@ -18,6 +21,7 @@ type ActivityDoc = {
 export type ActivityCard = {
   id: string;
   title: string;
+  activityType: ActivityType;
   dateLabel: string;
   timeLabel: string;
   location: string;
@@ -27,6 +31,7 @@ export type ActivityCard = {
 
 export type CreateActivityInput = {
   title: string;
+  activityType: string;
   startAt: string;
   endAt: string;
   location: string;
@@ -68,8 +73,9 @@ function formatTimeLabel(startAt: Date, endAt: Date) {
 // Converts an activity document into the UI card shape.
 function toActivityCard(activity: ActivityDoc): ActivityCard {
   return {
-    id: activity._id.toString(),
+    id: activity._id!.toString(),
     title: activity.title,
+    activityType: activity.activityType,
     dateLabel: formatDateLabel(activity.startAt),
     timeLabel: formatTimeLabel(activity.startAt, activity.endAt),
     location: activity.location,
@@ -95,14 +101,19 @@ export async function getUpcomingActivityCards(limit = 20) {
 // Validates and inserts a new activity document in MongoDB.
 export async function createActivity(input: CreateActivityInput) {
   const title = input.title.trim();
+  const activityType = input.activityType.trim();
   const location = input.location.trim();
   const summary = input.summary.trim();
   const startAt = new Date(input.startAt);
   const endAt = new Date(input.endAt);
   const maxParticipants = Number(input.maxParticipants);
 
-  if (!title || !location || !summary) {
-    throw new Error("Title, location, and summary are required.");
+  if (!title || !activityType || !location || !summary) {
+    throw new Error("Title, activity type, location, and summary are required.");
+  }
+
+  if (!ACTIVITY_TYPES.includes(activityType as ActivityType)) {
+    throw new Error("Activity type is invalid.");
   }
 
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
@@ -122,14 +133,15 @@ export async function createActivity(input: CreateActivityInput) {
 
   const result = await activities.insertOne({
     title,
+    activityType: activityType as ActivityType,
     startAt,
     endAt,
     location,
     summary,
     maxParticipants,
     tripLeaderId: new ObjectId(input.tripLeaderId),
-    participantIds: [],
-    waitlistIds: [],
+    participantIds: [] as ObjectId[],
+    waitlistIds: [] as ObjectId[],
     createdAt: new Date(),
   });
 

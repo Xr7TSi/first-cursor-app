@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ACTIVITY_TYPES } from "@/lib/activity-types";
 
 type FormState = {
   title: string;
+  activityType: string;
   startAt: string;
   endAt: string;
   location: string;
@@ -14,6 +16,7 @@ type FormState = {
 
 const initialState: FormState = {
   title: "",
+  activityType: ACTIVITY_TYPES[0],
   startAt: "",
   endAt: "",
   location: "",
@@ -41,6 +44,7 @@ export default function CreateActivityForm() {
         },
         body: JSON.stringify({
           title: form.title,
+          activityType: form.activityType,
           startAt: form.startAt,
           endAt: form.endAt,
           location: form.location,
@@ -77,6 +81,26 @@ export default function CreateActivityForm() {
           required
           className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
         />
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="activityType" className="block text-sm font-medium">
+          Activity type
+        </label>
+        <select
+          id="activityType"
+          value={form.activityType}
+          onChange={(event) =>
+            setForm((current) => ({ ...current, activityType: event.target.value }))
+          }
+          className="w-full rounded-lg border border-black/20 bg-transparent px-3 py-2 outline-none focus:border-black dark:border-white/30 dark:focus:border-white"
+        >
+          {ACTIVITY_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

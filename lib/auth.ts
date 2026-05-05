@@ -24,7 +24,7 @@ const ROLE_RANK: Record<UserRole, number> = {
 };
 
 type UserDoc = {
-  _id: ObjectId;
+  _id?: ObjectId;
   username: string;
   email: string;
   passwordHash: string;
@@ -148,7 +148,7 @@ export async function authenticateUser(emailInput: string, password: string) {
   }
 
   return {
-    userId: user._id,
+    userId: user._id!,
     username: user.username,
     role: toUserRole(user.role),
   };
@@ -176,7 +176,7 @@ export async function addAdminByEmail(emailInput: string) {
     throw new Error("That user is already an Admin.");
   }
 
-  await users.updateOne({ _id: user._id }, { $set: { role: "Admin" } });
+  await users.updateOne({ _id: user._id! }, { $set: { role: "Admin" } });
 }
 
 // Removes Admin role from a user and sets their role back to Member.
@@ -194,7 +194,7 @@ export async function removeAdminByEmail(emailInput: string, actingAdminId: stri
     throw new Error("That user is not an Admin.");
   }
 
-  if (user._id.toString() === actingAdminId) {
+  if (user._id!.toString() === actingAdminId) {
     throw new Error("You cannot remove your own Admin role.");
   }
 
@@ -218,14 +218,14 @@ export async function removeMemberByEmail(emailInput: string) {
     throw new Error("Only users with Member role can be removed here.");
   }
 
-  await users.deleteOne({ _id: user._id });
-  await sessions.deleteMany({ userId: user._id });
+  await users.deleteOne({ _id: user._id! });
+  await sessions.deleteMany({ userId: user._id! });
   await activities.updateMany(
     {},
     {
       $pull: {
-        participantIds: user._id,
-        waitlistIds: user._id,
+        participantIds: user._id!,
+        waitlistIds: user._id!,
       },
     },
   );
@@ -250,7 +250,7 @@ export async function addTripLeaderByEmail(emailInput: string) {
     throw new Error("Admins already have Trip Leader permissions.");
   }
 
-  await users.updateOne({ _id: user._id }, { $set: { role: "TripLeader" } });
+  await users.updateOne({ _id: user._id! }, { $set: { role: "TripLeader" } });
 }
 
 // Removes TripLeader role from a user and sets their role back to Member.
@@ -268,7 +268,7 @@ export async function removeTripLeaderByEmail(emailInput: string) {
     throw new Error("That user is not a Trip Leader.");
   }
 
-  await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
+  await users.updateOne({ _id: user._id! }, { $set: { role: "Member" } });
 }
 
 // Sets a user's role to Member for role reset/demotion workflows.
@@ -286,11 +286,11 @@ export async function addMemberByEmail(emailInput: string, actingAdminId: string
     throw new Error("That user is already a Member.");
   }
 
-  if (user._id.toString() === actingAdminId) {
+  if (user._id!.toString() === actingAdminId) {
     throw new Error("You cannot change your own role to Member.");
   }
 
-  await users.updateOne({ _id: user._id }, { $set: { role: "Member" } });
+  await users.updateOne({ _id: user._id! }, { $set: { role: "Member" } });
 }
 
 // Returns a sorted list of users for the requested role.
@@ -364,7 +364,7 @@ export async function getLoggedInUser() {
   }
 
   return {
-    id: user._id.toString(),
+    id: user._id!.toString(),
     username: user.username,
     email: user.email,
     role: toUserRole(user.role),
