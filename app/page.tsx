@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getLoggedInUser } from "@/lib/auth";
+import { canManageActivities, getLoggedInUser } from "@/lib/auth";
 import { getUpcomingActivityCards } from "@/lib/activities";
 
 export default async function Home() {
@@ -22,6 +22,14 @@ export default async function Home() {
           {user ? (
             <div className="flex items-center gap-3">
               <p className="text-sm">Hi {user.username}</p>
+              {canManageActivities(user.role) ? (
+                <Link
+                  href="/activities/new"
+                  className="rounded-full bg-black px-3 py-1.5 text-sm text-white transition hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                >
+                  Create
+                </Link>
+              ) : null}
               <form action="/api/auth/logout" method="post">
                 <button
                   type="submit"
